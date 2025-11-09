@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>NFT Simulado — ¡TODOS SOMOS UTADEO!</title>
+<style>
+  :root{
+    --brand:#00558F; --accent:#00A9A4; --bg:#fbfdff; --muted:#6b7280;
+  }
+  body{font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial; margin:0; padding:18px; background:var(--bg); color:#0f172a;}
+  header{display:flex;align-items:center;gap:12px}
+  header h1{margin:0;font-size:20px;color:var(--brand)}
+  .grid{display:grid;grid-template-columns: 420px 1fr; gap:16px; margin-top:12px}
+  .card{background:#fff;border-radius:10px;padding:12px;border:1px solid #e6eef6}
+  label{display:block;font-size:13px;margin:8px 0 6px;color:var(--muted)}
+  input[type=file]{display:block}
+  button{background:var(--brand);color:white;border:0;padding:8px 10px;border-radius:8px;cursor:pointer}
+  button.ghost{background:#fff;color:var(--brand);border:1px solid var(--brand)}
+  .preview{width:100%;height:auto;border-radius:8px;display:block;background:#f3f7fb}
+  .meta{font-family:ui-monospace,monospace;font-size:12px;background:#0f172a;color:#fff;padding:8px;border-radius:6px}
+  .muted{color:var(--muted);font-size:13px}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .nft-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+  .nft-item{border:1px solid #e6eef6;border-radius:8px;padding:8px;background:#fff}
+  .small-btn{padding:6px 8px;border-radius:6px;font-size:13px}
+  a.link{color:var(--brand);text-decoration:none}
+  .note{font-size:13px;color:var(--muted);margin-top:8px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Mintear NFT local — Mascota UTADEO</h1>
+  <div class="muted">Simulación educativa — todo local</div>
+</header>
+
+<div style="margin-top:12px" class="note">
+  ⓘ El HTML intentará cargar automáticamente <strong>mascota_utadeo.png</strong> si la colocas en la misma carpeta. También puedes arrastrar una imagen o seleccionar otra.
+</div>
+
+<div class="grid" role="main">
+  <div class="card" aria-label="Panel de creación">
+    <label for="file">Seleccionar / arrastrar imagen de mascota</label>
+    <input id="file" type="file" accept="image/*" />
+    <div style="margin-top:8px">
+      <canvas id="canvasPreview" width="400" height="400" class="preview" role="img" aria-label="Previsualización del NFT"></canvas>
+    </div>
+
+    <label for="title">Título del NFT</label>
+    <input id="title" type="text" placeholder="Mascota UTADEO #1" style="width:100%;padding:8px;border-radius:6px;border:1px solid #e6eef6" />
+
+    <label for="desc">Descripción</label>
+    <input id="desc" type="text" placeholder="¡Todos somos UTADEO! Mascota de la universidad" style="width:100%;padding:8px;border-radius:6px;border:1px solid #e6eef6" />
+
+    <label for="phrase">Frase a superponer</label>
+    <input id="phrase" type="text" value="¡TODOS SOMOS UTADEO!" style="width:100%;padding:8px;border-radius:6px;border:1px solid #e6eef6" />
+
+    <div style="margin-top:10px" class="row">
+      <button id="mintBtn">Mintear NFT (local)</button>
+      <button id="downloadMeta" class="ghost small-btn">Descargar metadata</button>
+      <button id="downloadImg" class="ghost small-btn">Descargar imagen</button>
+      <button id="genQR" class="ghost small-btn">Generar QR (metadata)</button>
+    </div>
+
+    <div style="margin-top:10px" class="muted">
+      <div>ID (token): <span id="tokenId">—</span></div>
+      <div>SHA-256: <div id="hash" class="meta" style="margin-top:6px">—</div></div>
+    </div>
+
+    <div style="margin-top:8px">
+      <label>Visibilidad / nota</label>
+      <div class="muted">Los NFT quedan guardados en este navegador (localStorage). Para usar en otra máquina descarga el JSON y la imagen.</div>
+    </div>
+  </div>
+
+  <div>
+    <div class="card" aria-label="Galería">
+      <h3 style="margin:0 0 8px 0">Galería local</h3>
+      <div id="nftList" class="nft-list"></div>
+      <div id="emptyNote" class="muted" style="margin-top:8px">No hay NFT minteados aún.</div>
+    </div>
+
+    <div class="card" style="margin-top:12px" aria-label="Instrucciones">
+      <h3 style="margin:0 0 8px 0">Cómo usar (rápido)</h3>
+      <ol>
+        <li>Coloca <code>mascota_utadeo.png</code> en la misma carpeta que este HTML (opcional).</li>
+        <li>O usa el botón de archivo / arrastra la imagen a la página.</li>
+        <li>Ajusta título o descripción si quieres, y deja la frase <strong>¡TODOS SOMOS UTADEO!</strong>.</li>
+        <li>Click en <strong>Mintear NFT (local)</strong>. Se generará tokenId y huella SHA-256 del metadata.</li>
+        <li>Descarga la imagen y el JSON desde la galería para compartir o generar QR.</li>
+      </ol>
+      <p class="note">Si quieres que te entregue el HTML con la imagen ya embebida en Base64, pídemelo y te lo devuelvo.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+/*
+  nft_utadeo_local.html
+  - Simula "minteo" local de un NFT con la mascota y la frase "¡TODOS SOMOS UTADEO!".
+  - Guarda en localStorage con llave "local_nfts_utadeo_v1".
+  - Calcula UUID v4 y SHA-256 del JSON de metadatos.
+  - No requiere servidores; para QR usa api.qrserver.com (esto sí hace una petición externa opcional).
+*/
+
+/* ---------- Helpers: UUID v4 & SHA-256 ---------- */
+function uuidv4(){
+  // Genera UUID v4 seguro
+  return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g,c =>
+    (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+  );
+}
+
+async function sha256Hex(str){
+  const bytes = new TextEncoder().encode(str);
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  const arr = Array.from(new Uint8Array(digest));
+  return arr.map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+/* ---------- Local storage ---------- */
+const STORAGE_KEY = "local_nfts_utadeo_v1";
+function loadNFTs(){ try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); } catch(e){ return []; } }
+function saveNFTs(list){ localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); }
+
+/* ---------- Canvas preview & image loading ---------- */
+const canvas = document.getElementById('canvasPreview');
+const ctx = canvas.getContext('2d', { willReadFrequently: true });
+let currentImage = null; // HTMLImageElement
+let currentDataUrl = null;
+
+function clearCanvas(){
+  ctx.fillStyle = "#f3f7fb";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle = "#cbd5e1";
+  ctx.font = "14px system-ui";
+  ctx.textAlign = "center";
+  ctx.fillText("No hay imagen cargada", canvas.width/2, canvas.height/2);
+}
+
+function fitAndDrawImage(img, phrase){
+  // Ajusta imagen al canvas manteniendo proporciones y dibuja la frase con fondo semitransparente.
+  const cw = canvas.width, ch = canvas.height;
+  ctx.clearRect(0,0,cw,ch);
+  // calcular tamaño
+  const r = Math.min(cw / img.width, ch / img.height);
+  const w = img.width * r, h = img.height * r;
+  const x = (cw - w)/2, y = (ch - h)/2;
+  // dibujo
+  ctx.drawImage(img, x, y, w, h);
+
+  // Sombra / barra inferior para texto
+  const pad = 12;
+  ctx.fillStyle = "rgba(0,0,0,0.45)";
+  const boxHeight = 50;
+  ctx.fillRect(0, ch - boxHeight - 10, cw, boxHeight + 10);
+
+  // Texto (frase)
+  ctx.fillStyle = "white";
+  ctx.textAlign = "center";
+  // ajustar tamaño de texto según ancho
+  let fontSize = 26;
+  ctx.font = `bold ${fontSize}px system-ui`;
+  while(ctx.measureText(phrase).width > cw - 2*pad && fontSize > 12){
+    fontSize -= 2;
+    ctx.font = `bold ${fontSize}px system-ui`;
+  }
+  ctx.fillText(phrase, cw/2, ch - 20);
+}
+
+document.getElementById('file').addEventListener('change', async (e)=>{
+  const f = e.target.files[0];
+  if(!f) return;
+  const url = URL.createObjectURL(f);
+  const img = new Image();
+  img.onload = () => {
+    currentImage = img;
+    currentDataUrl = null; // será generado al exportar
+    fitAndDrawImage(img, document.getElementById('phrase').value || "¡TODOS SOMOS UTADEO!");
+    URL.revokeObjectURL(url);
+  };
+  img.src = url;
+});
+
+/* Drag & drop */
+['dragover','drop'].forEach(evt=>{
+  document.addEventListener(evt, (e)=>{ e.preventDefault(); });
+});
+document.addEventListener('drop', (e)=>{
+  const f = e.dataTransfer.files?.[0];
+  if(!f) return;
+  const ev = new Event('change');
+  const input = document.getElementById('file');
+  // Workaround: can't set files programmatically in all browsers; just load via URL
+  const url = URL.createObjectURL(f);
+  const img = new Image();
+  img.onload = () => {
+    currentImage = img;
+    currentDataUrl = null;
+    fitAndDrawImage(img, document.getElementById('phrase').value || "¡TODOS SOMOS UTADEO!");
+    URL.revokeObjectURL(url);
+  };
+  img.src = url;
+});
+
+/* Try to auto-load mascota_utadeo.png placed alongside the HTML (optional) */
+(function tryLoadDefault(){
+  const defaultPath = 'mascota_utadeo.png'; // si pones este archivo junto al HTML se cargará
+  const img = new Image();
+  img.crossOrigin = "anonymous";
+  img.onload = () => { currentImage = img; fitAndDrawImage(img, document.getElementById('phrase').value || "¡TODOS SOMOS UTADEO!"); };
+  img.onerror = ()=>{ clearCanvas(); };
+  img.src = defaultPath;
+})();
+
+/* Redibuja frase cuando se edita */
+document.getElementById('phrase').addEventListener('input', ()=>{
+  const phrase = document.getElementById('phrase').value || "¡TODOS SOMOS UTADEO!";
+  if(currentImage) fitAndDrawImage(currentImage, phrase); else clearCanvas();
+});
+
+/* Inicial */
+clearCanvas();
+
+/* ---------- Crear dataURL de canvas (imagen final) ---------- */
+function getCanvasDataUrl(){
+  // dado que la imagen puede ser crossOrigin, usamos canvas.toDataURL directamente
+  return canvas.toDataURL('image/png');
+}
+
+/* ---------- Metadatos y minteo ---------- */
+async function buildMetadataObject(title, description, imageDataUrl, phrase){
+  const tokenId = "UTD-" + uuidv4().toUpperCase();
+  const metadata = {
+    name: title || `Mascota UTADEO`,
+    description: description || "NFT educativo — Mascota UTADEO",
+    image: imageDataUrl, // data url (png)
+    attributes: [
+      { trait_type: "Frase", value: phrase || "¡TODOS SOMOS UTADEO!" },
+      { trait_type: "Proyecto", value: "Simulador educativo UTADEO" }
+    ],
+    tokenId,
+    created_at: new Date().toISOString()
+  };
+  // calcular sha sobre la representación canónica (ordenado)
+  const canonical = JSON.stringify(metadata);
+  const sha = await sha256Hex(canonical);
+  metadata.sha256 = sha;
+  return metadata;
+}
+
+async function mintLocalNFT(){
+  // valida
+  if(!currentImage){ alert("Carga primero una imagen (drag & drop o 'Seleccionar archivo') o coloca 'mascota_utadeo.png' junto al HTML."); return; }
+  const title = document.getElementById('title').value.trim() || null;
+  const desc = document.getElementById('desc').value.trim() || null;
+  const phrase = document.getElementById('phrase').value.trim() || "¡TODOS SOMOS UTADEO!";
+  // generar imagen final en canvas con frase (ya está)
+  const imgDataUrl = getCanvasDataUrl();
+  // construir metadata
+  const meta = await buildMetadataObject(title, desc, imgDataUrl, phrase);
+  // guardar en localStorage
+  const list = loadNFTs();
+  list.push(meta);
+  saveNFTs(list);
+  // actualizar UI
+  document.getElementById('tokenId').textContent = meta.tokenId;
+  document.getElementById('hash').textContent = meta.sha256;
+  renderGallery();
+  alert("NFT minteado localmente ✅\nTokenId: " + meta.tokenId);
+}
+
+/* ---------- Descargar / QR ---------- */
+function download(filename, content, mime){
+  const blob = new Blob([content], { type: mime || 'application/octet-stream' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+document.getElementById('downloadMeta').addEventListener('click', ()=>{
+  const last = loadNFTs().slice(-1)[0];
+  if(!last){ alert("No hay metadata para descargar."); return; }
+  download(`${last.tokenId}_metadata.json`, JSON.stringify(last, null, 2), 'application/json');
+});
+
+document.getElementById('downloadImg').addEventListener('click', ()=>{
+  // descarga la imagen actual del canvas
+  const dataUrl = getCanvasDataUrl();
+  // convertir a blob
+  fetch(dataUrl).then(r=>r.blob()).then(blob=>{
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = `image_${Date.now()}.png`; a.click();
+    URL.revokeObjectURL(url);
+  });
+});
+
+document.getElementById('genQR').addEventListener('click', ()=>{
+  const last = loadNFTs().slice(-1)[0];
+  if(!last){ alert("Mintea un NFT primero para generar QR."); return; }
+  // Generar QR con api.qrserver.com apuntando a la representación JSON en base64 (si es muy largo puede truncarse, pero funciona para metadata pequeño)
+  const jsonStr = JSON.stringify(last);
+  // usar encodeURIComponent para poner la data en la query param
+  const encoded = encodeURIComponent(jsonStr);
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encoded}`;
+  window.open(qrUrl, '_blank');
+});
+
+/* ---------- Galería ---------- */
+function renderGallery(){
+  const list = loadNFTs();
+  const div = document.getElementById('nftList');
+  const empty = document.getElementById('emptyNote');
+  div.innerHTML = "";
+  if(!list.length){
+    empty.style.display = "block";
+    return;
+  }
+  empty.style.display = "none";
+  list.slice().reverse().forEach((m, idx)=>{
+    const item = document.createElement('div');
+    item.className = 'nft-item';
+    // thumbnail
+    const img = document.createElement('img');
+    img.src = m.image;
+    img.alt = m.name || m.tokenId;
+    img.style.width = '100%';
+    img.style.borderRadius = '6px';
+    item.appendChild(img);
+    // meta
+    const title = document.createElement('div');
+    title.style.fontWeight = '600';
+    title.style.marginTop = '6px';
+    title.textContent = m.name + " • " + m.tokenId;
+    item.appendChild(title);
+    const sha = document.createElement('div');
+    sha.className = 'muted';
+    sha.style.fontSize = '12px';
+    sha.textContent = m.sha256.slice(0,18) + '...';
+    item.appendChild(sha);
+    // acciones
+    const actions = document.createElement('div');
+    actions.style.marginTop = '8px';
+    const btnDownMeta = document.createElement('button');
+    btnDownMeta.className = 'small-btn ghost';
+    btnDownMeta.textContent = 'Descargar JSON';
+    btnDownMeta.addEventListener('click', ()=> download(`${m.tokenId}_metadata.json`, JSON.stringify(m, null, 2), 'application/json'));
+    const btnDownImg = document.createElement('button');
+    btnDownImg.className = 'small-btn ghost';
+    btnDownImg.style.marginLeft = '6px';
+    btnDownImg.textContent = 'Descargar IMG';
+    btnDownImg.addEventListener('click', ()=> {
+      fetch(m.image).then(r=>r.blob()).then(blob=>{
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = `${m.tokenId}.png`; a.click();
+        URL.revokeObjectURL(url);
+      });
+    });
+    const btnView = document.createElement('a');
+    btnView.className = 'link';
+    btnView.style.marginLeft = '8px';
+    btnView.href = '#';
+    btnView.textContent = 'Ver JSON';
+    btnView.addEventListener('click', (ev)=>{
+      ev.preventDefault();
+      alert(JSON.stringify(m, null, 2));
+    });
+    actions.appendChild(btnDownMeta);
+    actions.appendChild(btnDownImg);
+    actions.appendChild(btnView);
+    item.appendChild(actions);
+    div.appendChild(item);
+  });
+}
+
+/* ---------- Evento botón mintear ---------- */
+document.getElementById('mintBtn').addEventListener('click', mintLocalNFT);
+
+/* ---------- Inicial render ---------- */
+renderGallery();
+
+/* ---------- Seguridad y privacidad (nota) ---------- */
+/*
+  - No se transmiten datos sensibles a servidores externos desde este HTML.
+  - QR (cuando lo generas) usa api.qrserver.com para crear la imagen del código; si prefieres no usarlo, descarga el JSON y genera el QR con herramientas offline.
+  - Para llevar la colección a otra máquina descarga los JSON + PNG.
+*/
+</script>
+</body>
+</html>
